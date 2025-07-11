@@ -612,4 +612,56 @@ where
         self.query_builder.push_bind(value);
         self
     }
+
+    pub fn separated<'qbn, SepNested>(&'qbn mut self, separator: SepNested) -> Separated<'qbn, 'args, DB, SepNested>
+    where
+        'args: 'qbn,
+        'qb: 'qbn,
+        SepNested: Display {
+        if self.push_separator {
+            self.query_builder.push(&self.separator);
+        }
+        self.push_separator = true;
+
+        Separated {
+            query_builder: self.query_builder,
+            separator,
+            push_separator: false,
+        }
+    }
+
+    /// ```rust
+    /// use sqlx::{Execute, MySql, QueryBuilder};
+    /// let foods = vec!["pizza".to_string(), "chips".to_string()];
+    /// let drink = "water".to_string();
+    /// let mut query_builder: QueryBuilder<MySql> = QueryBuilder::new(
+    ///     "select * from courses where "
+    /// );
+    /// let mut where_clauses = query_builder.separated(" AND ");
+    /// where_clauses.push("(");
+    /// let mut food_clauses = where_clauses.separated_unseparated(" OR ");
+    /// for value_type in foods.iter() {
+    ///     food_clauses.push("food = ");
+    ///     food_clauses.push_bind_unseparated(value_type);
+    /// }
+    /// where_clauses.push_unseparated(")");
+    /// where_clauses.push("drink = ");
+    /// where_clauses.push_bind_unseparated(drink);
+    ///
+    /// let mut query = query_builder.build();
+    /// let sql = query.sql();
+    /// assert_eq!(sql.as_str(), "select * from courses where (food = ? OR food = ?) AND drink = ?");
+    /// ```
+    // TODO: Come up with a better name
+    pub fn separated_unseparated<'qbn, SepNested>(&'qbn mut self, separator: SepNested) -> Separated<'qbn, 'args, DB, SepNested>
+    where
+        'args: 'qbn,
+        'qb: 'qbn,
+        SepNested: Display {
+        Separated {
+            query_builder: self.query_builder,
+            separator,
+            push_separator: false,
+        }
+    }
 }
